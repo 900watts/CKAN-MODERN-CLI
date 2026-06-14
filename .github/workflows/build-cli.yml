@@ -25,7 +25,6 @@ jobs:
             Core
             CHANGELOG.md
             GlobalAssemblyInfo.cs
-            _build
 
       - name: Link Core dependencies
         shell: pwsh
@@ -33,7 +32,13 @@ jobs:
           Copy-Item -Recurse "Core-repo/Core" "Core"
           Copy-Item "Core-repo/CHANGELOG.md" "CHANGELOG.md"
           Copy-Item "Core-repo/GlobalAssemblyInfo.cs" "GlobalAssemblyInfo.cs" -ErrorAction SilentlyContinue
-          if (Test-Path "Core-repo/_build") { Copy-Item -Recurse "Core-repo/_build" "_build" }
+          New-Item -ItemType Directory -Path "_build/meta" -Force | Out-Null
+          @"
+          using System.Reflection;
+          [assembly: AssemblyVersion("2.0.0.0")]
+          [assembly: AssemblyFileVersion("2.0.0.0")]
+          [assembly: AssemblyInformationalVersion("2.0.0-dev")]
+          "@ | Set-Content "_build/meta/GlobalAssemblyVersionInfo.cs"
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
