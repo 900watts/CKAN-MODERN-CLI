@@ -25,12 +25,14 @@ jobs:
             Core
             CHANGELOG.md
             GlobalAssemblyInfo.cs
+            CKAN.schema
 
       - name: Link Core dependencies
         shell: pwsh
         run: |
           Copy-Item -Recurse "Core-repo/Core" "Core"
           Copy-Item "Core-repo/CHANGELOG.md" "CHANGELOG.md"
+          Copy-Item "Core-repo/CKAN.schema" "CKAN.schema" -ErrorAction SilentlyContinue
           Copy-Item "Core-repo/GlobalAssemblyInfo.cs" "GlobalAssemblyInfo.cs" -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Path "_build/meta" -Force | Out-Null
           @"
