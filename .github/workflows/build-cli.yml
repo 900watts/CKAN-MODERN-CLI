@@ -41,8 +41,8 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Publish self-contained CLI
-        shell: cmd
-        run: dotnet publish CLI/CKAN-CLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -p:ProduceReferenceAssembly=false "-p:NoWarn=NU1903;NU1902;NU1901;NU1900;IL3000;SYSLIB0050;CS1591" -o ./out-cli
+        shell: bash
+        run: dotnet publish CLI/CKAN-CLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -p:ProduceReferenceAssembly=false '-p:NoWarn=NU1903%3BNU1902%3BNU1901%3BNU1900%3BIL3000%3BSYSLIB0050%3BCS1591' -o ./out-cli
 
       - name: Verify output
         shell: pwsh
