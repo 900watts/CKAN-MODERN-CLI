@@ -1,0 +1,83 @@
+name: Build & Release CLI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'CLI/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout CKAN Core
+        uses: actions/checkout@v4
+        with:
+          repository: 900watts/CKAN-MODERN
+          path: Core-repo
+          sparse-checkout: |
+            Core
+            CHANGELOG.md
+            GlobalAssemblyInfo.cs
+            _build
+
+      - name: Link Core dependencies
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse "Core-repo/Core" "Core"
+          Copy-Item "Core-repo/CHANGELOG.md" "CHANGELOG.md"
+          Copy-Item "Core-repo/GlobalAssemblyInfo.cs" "GlobalAssemblyInfo.cs" -ErrorAction SilentlyContinue
+          if (Test-Path "Core-repo/_build") { Copy-Item -Recurse "Core-repo/_build" "_build" }
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish self-contained CLI
+        run: |
+          dotnet publish CLI/CKAN-CLI.csproj `
+            -c Release -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            -p:ProduceReferenceAssembly=false `
+            "-p:NoWarn=NU1903;NU1902;NU1901;NU1900;IL3000;SYSLIB0050;CS1591" `
+            -o ./out-cli
+
+      - name: Verify output
+        shell: pwsh
+        run: |
+          $exe = "out-cli/KerbClaw-CLI.exe"
+          if (!(Test-Path $exe)) { throw "KerbClaw-CLI.exe not found!" }
+          $size = (Get-Item $exe).Length / 1MB
+          Write-Host "KerbClaw-CLI.exe: $([math]::Round($size, 1)) MB"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KerbClaw-CLI
+          path: out-cli/KerbClaw-CLI.exe
+
+      - name: Create/Update latest release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "latest"
+          $existing = gh release view $tag 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            gh release delete-asset $tag KerbClaw-CLI.exe -y 2>$null
+            gh release upload $tag out-cli/KerbClaw-CLI.exe --clobber
+          } else {
+            gh release create $tag out-cli/KerbClaw-CLI.exe --title "KerbClaw CLI (Latest)" --notes "Self-contained CLI build. Runs on any Windows x64 PC without .NET installed."
+          }
